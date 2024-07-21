@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Image Processing with Flask</title>
+    <!-- Bootstrap CSS -->
+    <link
+      href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <script>
+      let video;
+      let canvas;
+      let context;
+      let stream;
+
+      function setupCamera() {
+        video = document.createElement("video");
+        video.classList.add("img-fluid");
+        video.width = 640;
+        video.height = 480;
+
+        canvas = document.createElement("canvas");
+        canvas.width = 640;
+        canvas.height = 480;
+        context = canvas.getContext("2d");
+
+        navigator.mediaDevices
+          .getUserMedia({ video: true })
+          .then((s) => {
+            stream = s;
+            video.srcObject = stream;
+            video.play();
+          })
+          .catch(console.error);
+
+        document.getElementById("videoContainer").appendChild(video);
+      }
+
+      function takeSnapshot() {
+        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const imageData = canvas.toDataURL("image/jpeg");
+
+        fetch("/upload", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ image: imageData }),
+        })
+          .then((response) => response.json())
+          .then((data) => {
+            document.getElementById("processedImage").src =
+              data.processed_images.edges;
+            document.getElementById("detectionResult").innerText =
+              data.detection_result;
+            document.getElementById(
+              "edgeDensity"
+            ).innerText = `Edge Density: ${data.edge_density}`;
+
+            // Display all processed images
+            document.getElementById("grayImage").src = data.processed_images.gray;
+            document.getElementById("blurredImage").src = data.processed_images.blurred;
+            document.getElementById("segmentedImage").src = data.processed_images.segmented;
+            document.getElementById("binaryImage").src = data.processed_images.binary;
+            document.getElementById("openingImage").src = data.processed_images.opening;
+            document.getElementById("filledImage").src = data.processed_images.filled;
+          });
+      }
+
+      function stopCamera() {
+        if (stream) {
+          stream.getTracks().forEach((track) => track.stop());
+        }
+      }
+
+      window.onload = setupCamera;
+      window.onbeforeunload = stopCamera;
+    </script>
+  </head>
+  <body>
+    <div class="container mt-5">
+      <h1 class="text-center mb-4">Image Processing with Flask</h1>
+      <div id="videoContainer" class="text-center mb-4"></div>
+      <div class="text-center mb-4">
+        <button class="btn btn-primary" onclick="takeSnapshot()">
+          Take Snapshot and Process
+        </button>
+      </div>
+      <div class="text-center mb-4">
+        <img
+          id="processedImage"
+          src=""
+          alt="Processed Image"
+          class="img-fluid"
+        />
+      </div>
+      <div class="text-center">
+        <p id="detectionResult" class="font-weight-bold"></p>
+        <p id="edgeDensity" class="font-weight-bold"></p>
+      </div>
+      <div class="text-center">
+        <h2>Processed Images</h2>
+        <img id="grayImage" src="" alt="Grayscale Image" class="img-fluid" />
+        <img id="blurredImage" src="" alt="Blurred Image" class="img-fluid" />
+        <img id="segmentedImage" src="" alt="Segmented Image" class="img-fluid" />
+        <img id="binaryImage" src="" alt="Binary Image" class="img-fluid" />
+        <img id="openingImage" src="" alt="Opening Image" class="img-fluid" />
+        <img id="filledImage" src="" alt="Filled Image" class="img-fluid" />
+      </div>
+    </div>
+    <!-- Bootstrap JS and dependencies -->
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+  </body>
+</html>
